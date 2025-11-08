@@ -1,0 +1,45 @@
+# ============================================
+# 🔒 GITCLEANER PROJECT - .gitignore TEMPLATE
+# ============================================
+
+# Go build output
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Compiled binaries for all OS builds
+gitcleaner-linux
+gitcleaner-mac
+gitcleaner-windows.exe
+gitcleaner.exe
+
+# Dependency folders (for Go)
+vendor/
+
+# IDE & editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.log
+
+# Environment & local configuration files
+.env
+.env.local
+*.token
+*.secret
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary build artifacts
+/dist/
+build/
+*.zip
+*.tar.gz
