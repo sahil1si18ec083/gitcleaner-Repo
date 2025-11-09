@@ -27,31 +27,7 @@ var listCmd = &cobra.Command{
 	Short: "List all your GitHub repositories",
 	Long:  "Fetches and displays all repositories from your GitHub account.",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Fetching your repositories...")
-		token := os.Getenv("GITHUB_TOKEN")
-
-		fmt.Println(token)
-		if token == "" {
-			fmt.Println("❌ Please set your GITHUB_TOKEN environment variable first.")
-			return
-		}
-		ctx := context.Background()
-		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: token},
-		)
-		tc := oauth2.NewClient(ctx, ts)
-
-		client := github.NewClient(tc)
-		opt := &github.RepositoryListByAuthenticatedUserOptions{
-			ListOptions: github.ListOptions{PerPage: 50},
-		}
-
-		repos, _, err := client.Repositories.ListByAuthenticatedUser(ctx, opt)
-		if err != nil {
-			fmt.Printf("Error while fetching repos")
-			return
-		}
-		fmt.Println(len(repos))
+		repos, _, _ := getRepoHelper()
 		if len(repos) == 0 {
 			fmt.Println("No repositories found.")
 			return
@@ -78,6 +54,36 @@ func contains(except []string, r string) bool {
 	}
 	return false
 }
+func getRepoHelper() ([]*github.Repository, *github.Client, context.Context) {
+	fmt.Println("Fetching your repositories...")
+
+	token := os.Getenv("GITHUB_TOKEN")
+	if token == "" {
+		fmt.Println("❌ Please set your GITHUB_TOKEN environment variable first.")
+		return []*github.Repository{}, nil, context.Background()
+	}
+
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: token},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+
+	client := github.NewClient(tc)
+
+	opt := &github.RepositoryListByAuthenticatedUserOptions{
+		ListOptions: github.ListOptions{PerPage: 50},
+	}
+
+	repos, _, err := client.Repositories.ListByAuthenticatedUser(ctx, opt)
+	if err != nil {
+		fmt.Println("❌ Error while fetching repos:", err)
+		return []*github.Repository{}, client, ctx
+	}
+
+	return repos, client, ctx
+
+}
 
 var deleteCmd = &cobra.Command{
 	Use:   "delete",
@@ -85,36 +91,7 @@ var deleteCmd = &cobra.Command{
 	Long:  "Delete your GitHub repositories with various options (all, only, except, dry-run).",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Deleting repositories...")
-		token := os.Getenv("GITHUB_TOKEN")
-		fmt.Println(token)
-
-		// fmt.Println(token)
-		if token == "" {
-			fmt.Println("❌ Please set your GITHUB_TOKEN environment variable first.")
-			return
-		}
-		ctx := context.Background()
-		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: token},
-		)
-		tc := oauth2.NewClient(ctx, ts)
-
-		client := github.NewClient(tc)
-		opt := &github.RepositoryListByAuthenticatedUserOptions{
-			ListOptions: github.ListOptions{PerPage: 10},
-		}
-
-		repos, _, err := client.Repositories.ListByAuthenticatedUser(ctx, opt)
-		if err != nil {
-			fmt.Printf("Error while fetching repos")
-			return
-		}
-		if len(repos) == 0 {
-			fmt.Println("No repositories found.")
-			return
-		}
-
-		fmt.Println("Your repositories:")
+		repos, client, ctx := getRepoHelper()
 
 		repoNames := []string{}
 		for _, r := range repos {
@@ -163,7 +140,6 @@ var deleteCmd = &cobra.Command{
 				return
 			}
 			username := user.GetLogin()
-			fmt.Println(username)
 			for _, r := range toDelete {
 				_, err := client.Repositories.Delete(ctx, username, r)
 				if err != nil {
@@ -171,6 +147,7 @@ var deleteCmd = &cobra.Command{
 					// fmt.Printf("%v", err)
 				}
 			}
+			fmt.Println("✅ Repositories deleted successfully.")
 
 		case "n", "N":
 			fmt.Println("❎ Deletion cancelled.")
